@@ -11,10 +11,6 @@ use regex::bytes::Regex;
 /// An `Iterator` that scans a `Read`, searches for the `delimiter`, and yields
 /// the non-delimiter bytes.
 ///
-/// This implementation incurs a new allocation when yielding, and the caller
-/// owns it. An alternate implementation using generic associated types that
-/// avoids the allocation is possible.
-///
 /// This implementation uses a private buffer that will grow proportional to the
 /// largest span of bytes between instances of `delimiter`.
 pub struct RegexSplitter<'a, 'b> {
@@ -74,10 +70,18 @@ impl<'a, 'b> RegexSplitter<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Iterator for RegexSplitter<'a, 'b> {
-    type Item = Result<Vec<u8>>;
+pub trait LendingIterator {
+    type Item<'a>
+    where
+        Self: 'a;
 
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next<'a>(&'a mut self) -> Option<Self::Item<'a>>;
+}
+
+impl<'a, 'b> LendingIterator for RegexSplitter<'a, 'b> {
+    type Item<'c> = Result<&'c [u8]> where Self: 'c;
+
+    fn next<'c>(&'c mut self) -> Option<Self::Item<'c>> {
         if let Err(error) = self.fill() {
             return Some(Err(error));
         }
@@ -100,16 +104,16 @@ impl<'a, 'b> Iterator for RegexSplitter<'a, 'b> {
             self.start += m.end();
             let r = if m.start() == 0 {
                 // We matched the delimiter at the beginning of the section.
-                Ok(Vec::new())
+                Ok(&section[0..0])
             } else {
                 // We matched a record.
-                Ok(section[0..m.start()].to_vec())
+                Ok(&section[0..m.start()])
             };
             Some(r)
         } else {
             // Last record, with no trailing delimiter.
             self.start = self.end;
-            Some(Ok(section.to_vec()))
+            Some(Ok(section))
         }
     }
 }
@@ -120,7 +124,7 @@ mod tests {
     use std::io::{Seek, SeekFrom, Write};
     use tempfile::tempfile;
 
-    use crate::RegexSplitter;
+    use crate::{LendingIterator, RegexSplitter};
 
     // Makes debugging easier than `DEFAULT_CAPACITY`, which fills the terminal
     // with junk.
@@ -136,10 +140,10 @@ mod tests {
         let mut splitter = RegexSplitter::with_capacity(&mut file, &delimiter, SMALL_CAPACITY);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"hello", r.as_slice());
+        assert_eq!(b"hello", r);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"world", r.as_slice());
+        assert_eq!(b"world", r);
 
         assert!(splitter.next().is_none());
     }
@@ -158,10 +162,10 @@ mod tests {
         let mut splitter = RegexSplitter::with_capacity(&mut file, &delimiter, SMALL_CAPACITY);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"greetings", r.as_slice());
+        assert_eq!(b"greetings", r);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"world", r.as_slice());
+        assert_eq!(b"world", r);
 
         assert!(splitter.next().is_none());
     }
