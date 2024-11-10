@@ -25,6 +25,7 @@ Example code adapted from the README.md of
 [the regex-chunker crate](https://github.com/d2718/regex-chunker).
 */
 use regex::bytes::Regex;
+use regex_splitter::LendingIterator;
 use std::error::Error;
 
 fn example() -> Result<(), Box<dyn Error>> {
@@ -35,9 +36,9 @@ fn example() -> Result<(), Box<dyn Error>> {
 
     let mut stdin = std::io::stdin();
     let re = Regex::new(r#"[ "\r\n.,!?:;/]+"#)?;
-    let chunker = RegexSplitter::new(&mut stdin, &re);
+    let mut chunker = RegexSplitter::new(&mut stdin, &re);
 
-    for chunk in chunker {
+    while let Some(chunk) = chunker.next() {
         let word = String::from_utf8_lossy(&chunk?).to_lowercase();
         *counts.entry(word).or_default() += 1;
     }
