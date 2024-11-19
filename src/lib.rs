@@ -11,10 +11,6 @@ use regex::bytes::Regex;
 /// An `Iterator` that scans a `Read`, searches for the `delimiter`, and yields
 /// the non-delimiter bytes.
 ///
-/// This implementation incurs a new allocation when yielding, and the caller
-/// owns it. An alternate implementation using generic associated types that
-/// avoids the allocation is possible.
-///
 /// This implementation uses a private buffer that will grow proportional to the
 /// largest span of bytes between instances of `delimiter`.
 pub struct RegexSplitter<'a, 'b> {
@@ -51,65 +47,71 @@ impl<'a, 'b> RegexSplitter<'a, 'b> {
             eof: false,
         }
     }
-
-    /// Fills the `StreamSplitter`’s buffer, growing it if it is already full.
-    fn fill(&mut self) -> Result<()> {
-        if self.end == self.buffer.capacity() {
-            if self.start == self.end {
-                // We have consumed the buffer. Reset it:
-                self.start = 0;
-                self.end = 0;
-            } else {
-                // The buffer is full. To read more, we must grow it:
-                self.buffer.resize(2 * self.buffer.capacity(), 0);
-            }
-        }
-        let cap = self.buffer.capacity();
-        let n = self.reader.read(&mut self.buffer[self.end..cap])?;
-        self.end += n;
-        if n == 0 {
-            self.eof = true;
-        }
-        Ok(())
-    }
 }
 
-impl<'a, 'b> Iterator for RegexSplitter<'a, 'b> {
-    type Item = Result<Vec<u8>>;
+pub trait LendingIterator {
+    type Item<'a>
+    where
+        Self: 'a;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Err(error) = self.fill() {
-            return Some(Err(error));
-        }
+    fn next<'a>(&'a mut self) -> Option<Self::Item<'a>>;
+}
 
-        if self.start == self.end && self.eof {
-            return None;
-        }
+impl<'a, 'b> LendingIterator for RegexSplitter<'a, 'b> {
+    type Item<'c> = Result<&'c [u8]> where Self: 'c;
 
-        let section = &self.buffer[self.start..self.end];
-        if let Some(m) = self.delimiter.find(section) {
-            if self.start + m.end() == self.end && !self.eof {
-                // `self.buffer` ends in delimiter-matching bytes, yet we
-                // are not at EOF. So we might not have matched the
-                // entirety of the delimiter. Therefore, start back at the
-                // top, which incurs a `fill`, which will grow
-                // `self.buffer`. The `unwrap` is OK because we must at
-                // least match the same match again.
-                return Some(self.next().unwrap());
+    fn next<'c>(&'c mut self) -> Option<Self::Item<'c>> {
+        loop {
+            if self.end == self.buffer.capacity() {
+                if self.start == self.end {
+                    // We have consumed the buffer. Reset it:
+                    self.start = 0;
+                    self.end = 0;
+                } else {
+                    // The buffer is full. To read more, we must grow it:
+                    self.buffer.resize(2 * self.buffer.capacity(), 0);
+                }
             }
-            self.start += m.end();
-            let r = if m.start() == 0 {
-                // We matched the delimiter at the beginning of the section.
-                Ok(Vec::new())
-            } else {
-                // We matched a record.
-                Ok(section[0..m.start()].to_vec())
+            let cap = self.buffer.capacity();
+            let n = match self.reader.read(&mut self.buffer[self.end..cap]) {
+                Ok(n) => n,
+                Err(error) => return Some(Err(error)),
             };
-            Some(r)
-        } else {
-            // Last record, with no trailing delimiter.
-            self.start = self.end;
-            Some(Ok(section.to_vec()))
+            self.end += n;
+            if n == 0 {
+                self.eof = true;
+            }
+            let old_start = self.start;
+            let old_end = self.end;
+
+            if self.start == self.end && self.eof {
+                return None;
+            }
+
+            if let Some(m) = self.delimiter.find(&self.buffer[old_start..old_end]) {
+                if self.start + m.end() == self.end && !self.eof {
+                    // `self.buffer` ends in delimiter-matching bytes, yet we
+                    // are not at EOF. So we might not have matched the
+                    // entirety of the delimiter. Therefore, start back at the
+                    // top, which incurs a `fill`, which will grow
+                    // `self.buffer`. The `unwrap` is OK because we must at
+                    // least match the same match again.
+                    continue;
+                }
+                self.start += m.end();
+                let r = if m.start() == 0 {
+                    // We matched the delimiter at the beginning of the section.
+                    Ok(&[0u8; 0][..])
+                } else {
+                    // We matched a record.
+                    Ok(&self.buffer[old_start..old_start + m.start()])
+                };
+                return Some(r.map(|slice| &*slice));
+            } else {
+                // Last record, with no trailing delimiter.
+                self.start = self.end;
+                return Some(Ok(&self.buffer[old_start..old_end]));
+            }
         }
     }
 }
@@ -120,7 +122,7 @@ mod tests {
     use std::io::{Seek, SeekFrom, Write};
     use tempfile::tempfile;
 
-    use crate::RegexSplitter;
+    use crate::{LendingIterator, RegexSplitter};
 
     // Makes debugging easier than `DEFAULT_CAPACITY`, which fills the terminal
     // with junk.
@@ -136,10 +138,10 @@ mod tests {
         let mut splitter = RegexSplitter::with_capacity(&mut file, &delimiter, SMALL_CAPACITY);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"hello", r.as_slice());
+        assert_eq!(b"hello", r);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"world", r.as_slice());
+        assert_eq!(b"world", r);
 
         assert!(splitter.next().is_none());
     }
@@ -158,10 +160,10 @@ mod tests {
         let mut splitter = RegexSplitter::with_capacity(&mut file, &delimiter, SMALL_CAPACITY);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"greetings", r.as_slice());
+        assert_eq!(b"greetings", r);
 
         let r = splitter.next().unwrap().unwrap();
-        assert_eq!(b"world", r.as_slice());
+        assert_eq!(b"world", r);
 
         assert!(splitter.next().is_none());
     }
