@@ -4,6 +4,8 @@
 //! An `Iterator` that yields `Vec<u8>`s from `Read`s, delimited by regular
 //! expressions.
 
+#![warn(clippy::all, clippy::pedantic, clippy::cargo)]
+
 use std::io::{Read, Result};
 
 use regex::bytes::Regex;
