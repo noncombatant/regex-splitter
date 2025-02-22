@@ -28,8 +28,7 @@ pub struct RegexSplitter<'a, 'b> {
     eof: bool,
 }
 
-/// This value is arbitrary, but seems good enough.
-pub const DEFAULT_CAPACITY: usize = 64 * 1024;
+const DEFAULT_CAPACITY: usize = 64 * 1024;
 
 impl<'a, 'b> RegexSplitter<'a, 'b> {
     /// Returns a new `StreamSplitter` that will split the bytes of `reader`
@@ -74,7 +73,7 @@ impl<'a, 'b> RegexSplitter<'a, 'b> {
     }
 }
 
-impl<'a, 'b> Iterator for RegexSplitter<'a, 'b> {
+impl Iterator for RegexSplitter<'_, '_> {
     type Item = Result<Vec<u8>>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -89,12 +88,11 @@ impl<'a, 'b> Iterator for RegexSplitter<'a, 'b> {
         let section = &self.buffer[self.start..self.end];
         if let Some(m) = self.delimiter.find(section) {
             if self.start + m.end() == self.end && !self.eof {
-                // `self.buffer` ends in delimiter-matching bytes, yet we
-                // are not at EOF. So we might not have matched the
-                // entirety of the delimiter. Therefore, start back at the
-                // top, which incurs a `fill`, which will grow
-                // `self.buffer`. The `unwrap` is OK because we must at
-                // least match the same match again.
+                // `self.buffer` ends in delimiter-matching bytes, yet we are
+                // not at EOF. So we might not have matched the entirety of the
+                // delimiter. Therefore, start back at the top, which incurs a
+                // `fill`, which will grow `self.buffer`. The `unwrap` is OK
+                // because we must at least match the same match again.
                 return Some(self.next().unwrap());
             }
             self.start += m.end();

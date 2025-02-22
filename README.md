@@ -5,8 +5,8 @@ This crate provides an `Iterator` that scans a `Read` looking for instances of a
 
 It is similar in purpose to
 [`regex-chunker`](https://github.com/d2718/regex-chunker), but differs in that
-it does less (no `async`, for example), so its implementation is simpler and has
-fewer dependencies.
+it does less (no `async`, for example), so its implementation is simpler and
+depends only on `regex`.
 
 ## Building And Running
 

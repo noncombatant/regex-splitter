@@ -1,8 +1,8 @@
 [package]
 name = "regex-splitter"
-version = "0.1.0"
-edition = "2021"
-author = ["Chris Palmer <chris@noncombatant.org>"]
+version = "1.0.0"
+edition = "2024"
+authors = ["Chris Palmer <chris@noncombatant.org>"]
 license-file = "LICENSE"
 description = """
 This crate provides an `Iterator` that scans a `Read` looking for instances of
