@@ -20,32 +20,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/*!
-Example code adapted from the README.md of
-[the regex-chunker crate](https://github.com/d2718/regex-chunker).
-*/
+//! Example code adapted from the README.md of
+//! [the regex-chunker crate](https://github.com/d2718/regex-chunker).
+
 use regex::bytes::Regex;
-use std::error::Error;
+use regex_splitter::RegexSplitter;
+use std::{collections::BTreeMap, error::Error};
 
-fn example() -> Result<(), Box<dyn Error>> {
-    use regex_splitter::RegexSplitter;
-    use std::collections::BTreeMap;
-
+fn main() -> Result<(), Box<dyn Error>> {
     let mut counts: BTreeMap<String, usize> = BTreeMap::new();
-
     let mut stdin = std::io::stdin();
     let re = Regex::new(r#"[ "\r\n.,!?:;/]+"#)?;
     let chunker = RegexSplitter::new(&mut stdin, &re);
-
     for chunk in chunker {
         let word = String::from_utf8_lossy(&chunk?).to_lowercase();
         *counts.entry(word).or_default() += 1;
     }
-
     println!("{:#?}", &counts);
     Ok(())
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    example()
 }

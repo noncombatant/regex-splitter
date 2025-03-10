@@ -6,9 +6,8 @@
 
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
 
-use std::io::{Read, Result};
-
 use regex::bytes::Regex;
+use std::io::{Read, Result};
 
 /// An `Iterator` that scans a `Read`, searches for the `delimiter`, and yields
 /// the non-delimiter bytes.
@@ -116,11 +115,10 @@ impl Iterator for RegexSplitter<'_, '_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::RegexSplitter;
     use regex::bytes::Regex;
     use std::io::{Seek, SeekFrom, Write};
     use tempfile::tempfile;
-
-    use crate::RegexSplitter;
 
     // Makes debugging easier than `DEFAULT_CAPACITY`, which fills the terminal
     // with junk.
