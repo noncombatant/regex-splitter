@@ -13,8 +13,7 @@ use std::io::{Read, Result};
 /// the non-delimiter bytes.
 ///
 /// This implementation incurs a new allocation when yielding, and the caller
-/// owns it. An alternate implementation using generic associated types that
-/// avoids the allocation is possible.
+/// owns it.
 ///
 /// This implementation uses a private buffer that will grow proportional to the
 /// largest span of bytes between instances of `delimiter`.
