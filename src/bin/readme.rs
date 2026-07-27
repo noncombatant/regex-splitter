@@ -36,6 +36,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         let word = String::from_utf8_lossy(&chunk?).to_lowercase();
         *counts.entry(word).or_default() += 1;
     }
-    println!("{:#?}", &counts);
+    println!("{:#?}", counts);
     Ok(())
 }

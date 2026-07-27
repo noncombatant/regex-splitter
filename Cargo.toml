@@ -1,6 +1,6 @@
 [package]
 name = "regex-splitter"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 authors = ["Chris Palmer <chris@noncombatant.org>"]
 license-file = "LICENSE"
