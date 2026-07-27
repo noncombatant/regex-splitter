@@ -12,7 +12,7 @@ repository = "https://github.com/noncombatant/regex-splitter"
 homepage = "https://github.com/noncombatant/regex-splitter"
 readme = "README.md"
 categories = ["text-processing"]
-keywords = ["regex", "iterator", "read", "chunking", "lexing", "scanning"]
+keywords = ["regex", "iterator", "read", "lexing", "scanning"]
 
 [dependencies]
 regex = "1.13.1"
