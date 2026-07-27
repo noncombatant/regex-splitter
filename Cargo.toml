@@ -1,6 +1,6 @@
 [package]
 name = "regex-splitter"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 authors = ["Chris Palmer <chris@noncombatant.org>"]
 license-file = "LICENSE"
@@ -15,7 +15,7 @@ categories = ["text-processing"]
 keywords = ["regex", "iterator", "read", "chunking", "lexing", "scanning"]
 
 [dependencies]
-regex = "1.11.1"
+regex = "1.13.1"
 
 [dev-dependencies]
 tempfile = "3.14.0"

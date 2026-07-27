@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "regex-splitter"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "regex",
  "tempfile",
